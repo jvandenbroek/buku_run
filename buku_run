@@ -48,9 +48,9 @@ main () {
 Use <span color='${help_color}'>${switch_view}</span> to switch View. <span color='${help_color}'>${actions}</span> for actions"
     if [[ $mode == "bookmarks" ]]; then
         content=$(parseBuku)
-        menu=$(echo "${content}" | _rofi -p '> ' -filter "${filter}" -mesg "${HELP}" -kb-custom-1 "${new_bookmark}" -kb-custom-2 "${switch_view}" -kb-custom-3 "${actions}" -kb-custom-4 "${edit}" -kb-custom-5 "${delete}")
+        menu=$(echo "${content}" | grep -v 'waiting for input' | _rofi -p '> ' -filter "${filter}" -mesg "${HELP}" -kb-custom-1 "${new_bookmark}" -kb-custom-2 "${switch_view}" -kb-custom-3 "${actions}" -kb-custom-4 "${edit}" -kb-custom-5 "${delete}" -kb-custom-6 "${copy_primary}" -kb-custom-7 "${copy_clipboard}")
     elif [[ $mode == "tags" ]]; then
-        menu=$(buku --np --st | awk '{$NF=""; print $0}' | cut -d ' ' -f2-  | _rofi -p '> ' -mesg "${HELP}" -kb-custom-1 "${new_bookmark}" -kb-custom-2 "${switch_view}" -kb-custom-3 "${actions}" -kb-custom-4 "${edit}" -kb-custom-5 "${delete}")
+        menu=$(buku --np --st | awk '{$NF=""; print $0}' | grep -v 'waiting for input' |  cut -d ' ' -f2-  | _rofi -p '> ' -mesg "${HELP}" -kb-custom-1 "${new_bookmark}" -kb-custom-2 "${switch_view}" -kb-custom-3 "${actions}" -kb-custom-4 "${edit}" -kb-custom-5 "${delete}" -kb-custom-6 "${copy_primary}" -kb-custom-7 "${copy_clipboard}")
     fi
     val=$?
     if [[ $val -eq 1 ]]; then
@@ -63,6 +63,10 @@ Use <span color='${help_color}'>${switch_view}</span> to switch View. <span colo
         deleteMenu
     elif [[ $val -eq 13 ]]; then
         editMenu
+	elif [[ $val -eq 15 ]]; then
+		copyURL "primary"
+	elif [[ $val -eq 16 ]]; then
+		copyURL "clipboard"
     elif [[ $val -eq 11 ]]; then
         if [[ $mode == "bookmarks" ]]; then
             export mode="tags"
@@ -180,6 +184,16 @@ editMenu () {
     fi
 }
 
+copyURL () {
+    id=$(getId "$content" "$menu")
+    title="$(getTitleFromId $id)"
+    bookmark="$(getUrlFromId $id)"
+    echo "${bookmark}" | xclip -selection $1
+    if [[ $notifysend == "true" ]] ; then
+        notify-send "Copied ${bookmark} to $1"
+    fi
+}
+
 editTags () {
     edittagsmenu=$(echo | _rofi -filter "${tags}" -p '> ' -mesg "Edit Tags and hit Enter")
     val=$?
@@ -294,7 +308,7 @@ getId () {
 }
 
 getTitleFromId () {
-  echo "$(buku --nc -p $1 | gawk '
+  echo "$(buku --nc -p $1 | grep -v 'waiting for input' | gawk '
   BEGIN {
     RS=""
     FS="\n"
@@ -306,7 +320,7 @@ getTitleFromId () {
 }
 
 getUrlFromId () {
-  echo "$(buku --nc -p $1 | gawk '
+  echo "$(buku --nc -p $1 | grep -v 'waiting for input' | gawk '
   BEGIN {
     RS=""
     FS="\n"
@@ -318,7 +332,7 @@ getUrlFromId () {
 }
 
 getTagsFromId () {
-  echo "$(buku --nc -p $1 | gawk '
+  echo "$(buku --nc -p $1 | grep -v 'waiting for input' | gawk '
   BEGIN {
     RS=""
     FS="\n"
